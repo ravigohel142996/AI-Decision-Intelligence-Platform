@@ -251,6 +251,64 @@ Outlook: {"Favorable growth expected" if forecast_trend == "Positive" else "Caut
         
         return summary
 
+    def detect_operational_risks(self, df: pd.DataFrame, window: int = 14) -> Dict[str, Any]:
+        """Detect operational anomalies and potential risks in sales data."""
+        df = df.copy()
+        df['date'] = pd.to_datetime(df['date'])
+        df = df.sort_values('date')
+
+        df['profit_margin'] = df['profit'] / df['revenue'].replace(0, np.nan)
+        df['revenue_roll'] = df['revenue'].rolling(window=window, min_periods=7).mean()
+        df['profit_roll'] = df['profit'].rolling(window=window, min_periods=7).mean()
+
+        revenue_std = df['revenue'].std() or 1
+        profit_std = df['profit'].std() or 1
+        revenue_z = (df['revenue'] - df['revenue'].mean()) / revenue_std
+        profit_z = (df['profit'] - df['profit'].mean()) / profit_std
+
+        anomalies = []
+        for _, row in df.iterrows():
+            severity = None
+            triggers = []
+
+            if abs(revenue_z.loc[row.name]) > 2:
+                severity = 'High'
+                triggers.append('Revenue spike/drop anomaly')
+            if abs(profit_z.loc[row.name]) > 2:
+                severity = 'High' if severity else 'Medium'
+                triggers.append('Profit variance anomaly')
+            if pd.notna(row['revenue_roll']) and row['revenue'] < row['revenue_roll'] * 0.85:
+                severity = severity or 'Medium'
+                triggers.append('Revenue below rolling average')
+            if pd.notna(row['profit_roll']) and row['profit'] < row['profit_roll'] * 0.8:
+                severity = severity or 'Medium'
+                triggers.append('Profit below rolling average')
+            if pd.notna(row['profit_margin']) and row['profit_margin'] < 0.05:
+                severity = severity or 'Low'
+                triggers.append('Profit margin below 5%')
+
+            if triggers:
+                anomalies.append({
+                    'date': row['date'].date().isoformat(),
+                    'region': row.get('region', 'N/A'),
+                    'product_category': row.get('product_category', 'N/A'),
+                    'revenue': float(row['revenue']),
+                    'profit': float(row['profit']),
+                    'profit_margin': float(row['profit_margin']) if pd.notna(row['profit_margin']) else 0.0,
+                    'severity': severity,
+                    'triggers': ", ".join(triggers)
+                })
+
+        severity_weights = {'High': 3, 'Medium': 2, 'Low': 1}
+        risk_score = sum(severity_weights.get(a['severity'], 1) for a in anomalies)
+        normalized_score = min(100.0, (risk_score / max(len(df), 1)) * 100)
+
+        return {
+            'anomalies': anomalies,
+            'anomaly_count': len(anomalies),
+            'risk_score': float(normalized_score)
+        }
+
 
 if __name__ == "__main__":
     # Test the advisor
