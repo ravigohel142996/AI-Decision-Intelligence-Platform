@@ -1,5 +1,5 @@
 """
-Predictor Module - ML Forecasting with XGBoost and LSTM
+Predictor Module - ML Forecasting with Gradient Boosting and MLP
 Handles time series forecasting and business predictions
 """
 
@@ -7,16 +7,15 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import xgboost as xgb
-from tensorflow import keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.neural_network import MLPRegressor
+from sklearn.metrics import mean_absolute_error
 import pickle
 import os
 
 
 class BusinessPredictor:
-    """Enterprise-grade forecasting engine"""
+    """Enterprise-grade forecasting engine with lightweight models"""
     
     def __init__(self):
         self.xgb_model = None
@@ -49,7 +48,7 @@ class BusinessPredictor:
         return df
     
     def train_xgboost(self, df, target_col='revenue'):
-        """Train XGBoost model for forecasting"""
+        """Train Gradient Boosting model for forecasting"""
         # Prepare features
         df = self.prepare_data(df, target_col)
         
@@ -62,10 +61,10 @@ class BusinessPredictor:
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
         # Train model
-        self.xgb_model = xgb.XGBRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=5,
+        self.xgb_model = GradientBoostingRegressor(
+            n_estimators=200,
+            learning_rate=0.05,
+            max_depth=3,
             random_state=42
         )
         self.xgb_model.fit(X_train, y_train)
@@ -94,7 +93,7 @@ class BusinessPredictor:
         return np.array(X), np.array(y)
     
     def train_lstm(self, df, target_col='revenue', window_size=7):
-        """Train LSTM model for time series forecasting"""
+        """Train MLP sequence model for time series forecasting"""
         # Prepare data
         df = df.sort_values('date').reset_index(drop=True)
         data = df[target_col].values.reshape(-1, 1)
@@ -114,36 +113,36 @@ class BusinessPredictor:
         y_train, y_test = y[:split_idx], y[split_idx:]
         
         # Build LSTM model
-        self.lstm_model = Sequential([
-            LSTM(50, activation='relu', return_sequences=True, input_shape=(window_size, 1)),
-            Dropout(0.2),
-            LSTM(50, activation='relu'),
-            Dropout(0.2),
-            Dense(1)
-        ])
-        
-        self.lstm_model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-        
-        # Train model
-        history = self.lstm_model.fit(
-            X_train, y_train,
-            epochs=50,
-            batch_size=16,
-            validation_data=(X_test, y_test),
-            verbose=0
+        self.lstm_model = MLPRegressor(
+            hidden_layer_sizes=(64, 32),
+            activation='relu',
+            solver='adam',
+            max_iter=500,
+            random_state=42
         )
-        
+
+        X_train_flat = X_train.reshape(X_train.shape[0], -1)
+        X_test_flat = X_test.reshape(X_test.shape[0], -1)
+
+        self.lstm_model.fit(X_train_flat, y_train.ravel())
+
         # Save model
-        self.lstm_model.save(f'{self.models_dir}/lstm_model.h5')
-        
+        with open(f'{self.models_dir}/lstm_model.pkl', 'wb') as f:
+            pickle.dump(self.lstm_model, f)
+
         # Make predictions
-        predictions = self.lstm_model.predict(X_test)
+        predictions = self.lstm_model.predict(X_test_flat).reshape(-1, 1)
         predictions = self.scaler.inverse_transform(predictions)
         actuals = self.scaler.inverse_transform(y_test)
-        
+
+        val_mae = mean_absolute_error(actuals, predictions)
+
         return {
-            'train_loss': history.history['loss'][-1],
-            'val_loss': history.history['val_loss'][-1],
+            'train_loss': float(mean_absolute_error(
+                self.scaler.inverse_transform(y_train),
+                self.scaler.inverse_transform(self.lstm_model.predict(X_train_flat).reshape(-1, 1))
+            )),
+            'val_loss': float(val_mae),
             'predictions': predictions.flatten(),
             'actuals': actuals.flatten()
         }
@@ -188,7 +187,7 @@ class BusinessPredictor:
             current_sequence = scaled_data.reshape(1, window_size, 1)
             
             for _ in range(n_days):
-                pred = self.lstm_model.predict(current_sequence, verbose=0)
+                pred = self.lstm_model.predict(current_sequence.reshape(1, -1)).reshape(-1, 1)
                 forecast.append(self.scaler.inverse_transform(pred)[0, 0])
                 
                 # Update sequence
@@ -221,21 +220,21 @@ if __name__ == "__main__":
     # Load sample data
     df = pd.read_csv('data/sample_sales.csv')
     
-    # Test XGBoost
-    print("Training XGBoost model...")
+    # Test gradient boosting
+    print("Training gradient boosting model...")
     xgb_results = predictor.train_xgboost(df)
-    print(f"XGBoost Train R²: {xgb_results['train_score']:.4f}")
-    print(f"XGBoost Test R²: {xgb_results['test_score']:.4f}")
+    print(f"GBR Train R²: {xgb_results['train_score']:.4f}")
+    print(f"GBR Test R²: {xgb_results['test_score']:.4f}")
     
     # Test LSTM
-    print("\nTraining LSTM model...")
+    print("\nTraining MLP sequence model...")
     lstm_results = predictor.train_lstm(df)
-    print(f"LSTM Val Loss: {lstm_results['val_loss']:.4f}")
+    print(f"MLP Val MAE: {lstm_results['val_loss']:.4f}")
     
     # Test forecasting
     print("\nForecasting next 7 days...")
     forecast_xgb = predictor.forecast_next_n_days(df, n_days=7, method='xgboost')
-    print(f"XGBoost Forecast: {forecast_xgb}")
+    print(f"GBR Forecast: {forecast_xgb}")
     
     forecast_lstm = predictor.forecast_next_n_days(df, n_days=7, method='lstm')
-    print(f"LSTM Forecast: {forecast_lstm}")
+    print(f"MLP Forecast: {forecast_lstm}")
