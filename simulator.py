@@ -184,6 +184,10 @@ class BusinessSimulator:
         
         results_df = pd.DataFrame(results)
         
+        # Calculate Value at Risk properly using profit
+        base_profit = df['profit'].sum()
+        profit_var = float(results_df['profit'].quantile(0.05) - base_profit)  # 5% worst case loss
+        
         return {
             'iterations': iterations,
             'mean_revenue': float(results_df['revenue'].mean()),
@@ -193,7 +197,7 @@ class BusinessSimulator:
             'profit_5th_percentile': float(results_df['profit'].quantile(0.05)),
             'profit_95th_percentile': float(results_df['profit'].quantile(0.95)),
             'probability_profitable': float((results_df['profit'] > 0).mean()),
-            'value_at_risk_5pct': float(base_revenue * revenue_volatility * 1.65)  # 5% VaR
+            'value_at_risk_5pct': float(profit_var)  # 5% VaR - potential profit loss
         }
     
     def sensitivity_analysis(self, df: pd.DataFrame, 

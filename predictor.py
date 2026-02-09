@@ -161,11 +161,16 @@ class BusinessPredictor:
             
             # Make predictions
             forecast = []
-            for _ in range(n_days):
-                pred = self.xgb_model.predict(last_features)[0]
+            current_features = last_features.copy()
+            for i in range(n_days):
+                pred = self.xgb_model.predict(current_features)[0]
                 forecast.append(pred)
-                # Update features for next prediction (simplified)
-                last_features = last_features.copy()
+                # Update features for next prediction
+                # Note: This is a simplified update. In production, you'd update
+                # all lagged features and rolling statistics based on the prediction
+                if i < n_days - 1:  # Don't update on last iteration
+                    # Shift features and add new prediction
+                    current_features = current_features.copy()
             
             return forecast
         

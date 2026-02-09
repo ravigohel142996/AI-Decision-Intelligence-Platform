@@ -308,7 +308,13 @@ def show_forecasting(sales_df, predictor, dashboard):
                     method=method
                 )
                 
+                # Store forecast with its parameters to detect stale data
                 st.session_state.forecast = forecast
+                st.session_state.forecast_params = {
+                    'days': forecast_days,
+                    'method': forecast_method,
+                    'metric': target_metric
+                }
                 st.session_state.forecast_generated = True
                 st.success("✅ Forecast generated!")
     
