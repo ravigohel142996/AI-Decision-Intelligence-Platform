@@ -1,0 +1,11 @@
+risk_id,risk_category,severity,probability,impact_score,mitigation_status,description
+R001,Financial,High,0.7,8.5,In Progress,Market volatility affecting revenue streams
+R002,Operational,Medium,0.5,6.0,Planned,Supply chain disruptions
+R003,Strategic,High,0.6,7.8,Active,Competition from new market entrants
+R004,Compliance,Low,0.3,4.2,Monitored,Regulatory changes in data privacy
+R005,Technology,Medium,0.5,6.5,In Progress,Cybersecurity threats and data breaches
+R006,Financial,Medium,0.4,5.5,Planned,Currency exchange rate fluctuations
+R007,Operational,High,0.8,9.0,Active,Key personnel turnover
+R008,Strategic,Low,0.3,4.0,Monitored,Brand reputation damage
+R009,Compliance,Medium,0.5,6.2,In Progress,Tax policy changes
+R010,Technology,High,0.7,8.2,Active,Legacy system failures
