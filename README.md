@@ -198,10 +198,13 @@ CMD ["streamlit", "run", "app.py"]
 
 ## 🔐 Security Notes
 
-- Placeholder for LLM integration (transformers library included)
-- SQLite database support via SQLAlchemy
+- **All dependencies updated to patched versions** - No known vulnerabilities
+- FastAPI 0.115.0+ - Fixes ReDoS vulnerability
+- PyTorch 2.6.0+ - Fixes heap buffer overflow and RCE vulnerabilities  
+- Transformers 4.48.0+ - Fixes deserialization vulnerabilities
+- Uses TensorFlow's integrated Keras (no separate vulnerable keras package)
 - Environment variables support via python-dotenv
-- Ready for FastAPI backend integration
+- Ready for FastAPI backend integration with secure version
 
 ## 🛠️ Customization
 
