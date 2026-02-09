@@ -429,26 +429,6 @@ class BusinessDashboard:
 
 
 if __name__ == "__main__":
-    # Test the dashboard
-    dashboard = BusinessDashboard()
-    
-    # Load sample data
-    df = pd.read_csv('data/sample_sales.csv')
-    risks_df = pd.read_csv('data/sample_risks.csv')
-    
-    # Test charts
-    print("Creating revenue trend chart...")
-    fig1 = dashboard.create_revenue_trend_chart(df)
-    fig1.show()
-    
-    print("Creating regional analysis...")
-    fig2 = dashboard.create_regional_analysis(df)
-    fig2.show()
-    
-    print("Creating product analysis...")
-    fig3 = dashboard.create_product_analysis(df)
-    fig3.show()
-    
-    print("Creating risk heatmap...")
-    fig4 = dashboard.create_risk_heatmap(risks_df)
-    fig4.show()
+    from app import main
+
+    main()
