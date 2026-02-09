@@ -27,6 +27,9 @@ st.set_page_config(
 # Custom CSS for premium UI
 st.markdown("""
 <style>
+    .stApp {
+        background: linear-gradient(180deg, rgba(248,250,255,0.9) 0%, rgba(255,255,255,1) 35%);
+    }
     .main-header {
         font-size: 3rem;
         font-weight: bold;
@@ -42,6 +45,13 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
+    .section-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(31, 119, 180, 0.08);
+        border: 1px solid rgba(31, 119, 180, 0.08);
+    }
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1.5rem;
@@ -49,6 +59,14 @@ st.markdown("""
         color: white;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .kpi-card {
+        background: linear-gradient(135deg, #1f77b4 0%, #17a2b8 100%);
+        padding: 1.25rem;
+        border-radius: 14px;
+        color: white;
+        text-align: left;
+        box-shadow: 0 6px 16px rgba(31, 119, 180, 0.2);
     }
     .metric-value {
         font-size: 2rem;
@@ -67,6 +85,23 @@ st.markdown("""
         font-size: 1rem;
         font-weight: bold;
         border-radius: 5px;
+    }
+    .glass-banner {
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 18px;
+        padding: 1.5rem 2rem;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.4);
+    }
+    .pill {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        background: rgba(31, 119, 180, 0.1);
+        color: #1f77b4;
+        font-weight: 600;
+        margin-right: 0.5rem;
     }
     .recommendation-box {
         background: #f0f8ff;
@@ -89,6 +124,13 @@ st.markdown("""
         margin: 1rem 0;
         border-radius: 5px;
     }
+    .sidebar-card {
+        background: rgba(31, 119, 180, 0.08);
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+        border: 1px solid rgba(31, 119, 180, 0.1);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -100,6 +142,8 @@ if 'sales_data' not in st.session_state:
     st.session_state.sales_data = None
 if 'risks_data' not in st.session_state:
     st.session_state.risks_data = None
+if 'kpi_data' not in st.session_state:
+    st.session_state.kpi_data = None
 
 
 # Initialize modules
@@ -118,10 +162,11 @@ def load_data():
     try:
         sales_df = pd.read_csv('data/sample_sales.csv')
         risks_df = pd.read_csv('data/sample_risks.csv')
-        return sales_df, risks_df
+        kpi_df = pd.read_csv('data/sample_kpis.csv')
+        return sales_df, risks_df, kpi_df
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        return None, None
+        return None, None, None
 
 
 def main():
@@ -138,8 +183,8 @@ def main():
     st.sidebar.title("🎯 Navigation")
     page = st.sidebar.radio(
         "Select Feature",
-        ["🏠 Home", "📊 Business Analytics", "🔮 Forecasting", "🎲 Scenario Simulation", 
-         "🛡️ Risk Assessment", "💡 AI Advisor", "📈 Executive Dashboard"]
+        ["🏠 Home", "📊 Business Analytics", "🔮 Forecasting", "🎲 Scenario Simulation",
+         "🚨 Risk Detection", "🛡️ Risk Assessment", "💡 AI Advisor", "📈 Executive Dashboard"]
     )
     
     # Data loading
@@ -147,10 +192,11 @@ def main():
     st.sidebar.subheader("📁 Data Management")
     
     if st.sidebar.button("Load Sample Data"):
-        sales_df, risks_df = load_data()
+        sales_df, risks_df, kpi_df = load_data()
         if sales_df is not None:
             st.session_state.sales_data = sales_df
             st.session_state.risks_data = risks_df
+            st.session_state.kpi_data = kpi_df
             st.session_state.data_loaded = True
             st.sidebar.success("✅ Data loaded successfully!")
     
@@ -161,10 +207,11 @@ def main():
     
     sales_df = st.session_state.sales_data
     risks_df = st.session_state.risks_data
+    kpi_df = st.session_state.kpi_data
     
     # Page routing
     if page == "🏠 Home":
-        show_home(sales_df, risks_df, advisor)
+        show_home(sales_df, risks_df, kpi_df, advisor, dashboard)
     
     elif page == "📊 Business Analytics":
         show_business_analytics(sales_df, dashboard)
@@ -174,6 +221,9 @@ def main():
     
     elif page == "🎲 Scenario Simulation":
         show_scenario_simulation(sales_df, simulator, dashboard)
+
+    elif page == "🚨 Risk Detection":
+        show_risk_detection(sales_df, advisor, dashboard)
     
     elif page == "🛡️ Risk Assessment":
         show_risk_assessment(risks_df, advisor, dashboard)
@@ -182,21 +232,27 @@ def main():
         show_ai_advisor(sales_df, risks_df, advisor)
     
     elif page == "📈 Executive Dashboard":
-        show_executive_dashboard(sales_df, risks_df, advisor, predictor, dashboard)
+        show_executive_dashboard(sales_df, risks_df, kpi_df, advisor, predictor, dashboard)
 
 
-def show_home(sales_df, risks_df, advisor):
+def show_home(sales_df, risks_df, kpi_df, advisor, dashboard):
     """Home page with overview"""
     st.header("Welcome to DecisionPilot AI")
-    
+
     st.markdown("""
-    ### 🚀 Enterprise-Grade AI Decision Intelligence Platform
+    <div class="glass-banner">
+        <span class="pill">Enterprise AI</span>
+        <span class="pill">Real-time Analytics</span>
+        <span class="pill">Secure by Design</span>
+        <h3>🚀 Enterprise-Grade AI Decision Intelligence Platform</h3>
+        <p><strong>DecisionPilot AI</strong> empowers executives with advanced analytics, predictive insights,
+        and intelligent recommendations for strategic decision-making.</p>
+        <p><strong>Mission Control:</strong> Unified analytics, forecasting, risk detection, and simulation
+        across business, operations, and finance teams.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    **DecisionPilot AI** empowers executives with advanced analytics, predictive insights, 
-    and intelligent recommendations for strategic decision-making.
-    
-    #### 🎯 Key Features:
-    """)
+    st.markdown("#### 🎯 Key Features")
     
     col1, col2, col3 = st.columns(3)
     
@@ -260,6 +316,47 @@ def show_home(sales_df, risks_df, advisor):
             f"{health['avg_customer_satisfaction']:.2f}/5.0",
             delta=health['satisfaction_rating']['rating']
         )
+
+    st.markdown("---")
+
+    st.subheader("✨ Enterprise KPI Pulse")
+    latest_kpi = kpi_df.sort_values('date').iloc[-1]
+
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
+    with kpi_col1:
+        st.markdown(
+            f"<div class='kpi-card'><div class='metric-label'>NPS</div>"
+            f"<div class='metric-value'>{latest_kpi['nps']:.0f}</div></div>",
+            unsafe_allow_html=True
+        )
+    with kpi_col2:
+        st.markdown(
+            f"<div class='kpi-card'><div class='metric-label'>Churn</div>"
+            f"<div class='metric-value'>{latest_kpi['churn_rate']:.1%}</div></div>",
+            unsafe_allow_html=True
+        )
+    with kpi_col3:
+        st.markdown(
+            f"<div class='kpi-card'><div class='metric-label'>Pipeline</div>"
+            f"<div class='metric-value'>${latest_kpi['pipeline_value']/1e6:.2f}M</div></div>",
+            unsafe_allow_html=True
+        )
+    with kpi_col4:
+        st.markdown(
+            f"<div class='kpi-card'><div class='metric-label'>Engagement</div>"
+            f"<div class='metric-value'>{latest_kpi['employee_engagement']:.2f}/5</div></div>",
+            unsafe_allow_html=True
+        )
+    with kpi_col5:
+        st.markdown(
+            f"<div class='kpi-card'><div class='metric-label'>Partner Health</div>"
+            f"<div class='metric-value'>{latest_kpi['partner_health']:.0f}</div></div>",
+            unsafe_allow_html=True
+        )
+
+    with st.expander("📊 KPI Trends"):
+        kpi_fig = dashboard.create_kpi_trends(kpi_df)
+        st.plotly_chart(kpi_fig, use_container_width=True)
 
 
 def show_business_analytics(sales_df, dashboard):
@@ -478,6 +575,33 @@ def show_scenario_simulation(sales_df, simulator, dashboard):
                     st.metric("Probability Profitable", f"{results['probability_profitable']:.1%}")
 
 
+def show_risk_detection(sales_df, advisor, dashboard):
+    """Risk detection page using anomaly signals"""
+    st.header("🚨 Risk Detection & Early Warning System")
+    st.markdown("Proactively identify operational anomalies and potential revenue risks.")
+
+    detection = advisor.detect_operational_risks(sales_df)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Detected Anomalies", detection['anomaly_count'])
+    with col2:
+        st.metric("Operational Risk Score", f"{detection['risk_score']:.1f}/100")
+    with col3:
+        st.metric("Monitoring Window", "14 days")
+
+    st.subheader("📉 Revenue Trend with Anomaly Focus")
+    fig = dashboard.create_revenue_trend_chart(sales_df)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("🔍 Anomaly Log")
+    if detection['anomalies']:
+        anomaly_df = pd.DataFrame(detection['anomalies'])
+        st.dataframe(anomaly_df, use_container_width=True)
+    else:
+        st.success("✅ No significant anomalies detected across the monitoring window.")
+
+
 def show_risk_assessment(risks_df, advisor, dashboard):
     """Risk assessment page"""
     st.header("🛡️ Risk Assessment & Mitigation")
@@ -558,7 +682,7 @@ def show_ai_advisor(sales_df, risks_df, advisor):
             st.markdown(f'<div class="recommendation-box">{rec}</div>', unsafe_allow_html=True)
 
 
-def show_executive_dashboard(sales_df, risks_df, advisor, predictor, dashboard):
+def show_executive_dashboard(sales_df, risks_df, kpi_df, advisor, predictor, dashboard):
     """Executive dashboard with all key metrics"""
     st.header("📈 Executive Dashboard")
     
@@ -587,6 +711,10 @@ def show_executive_dashboard(sales_df, risks_df, advisor, predictor, dashboard):
     st.subheader("Risk Overview")
     fig_risk = dashboard.create_risk_heatmap(risks_df)
     st.plotly_chart(fig_risk, use_container_width=True)
+
+    st.subheader("Enterprise KPI Trends")
+    kpi_fig = dashboard.create_kpi_trends(kpi_df)
+    st.plotly_chart(kpi_fig, use_container_width=True)
 
 
 if __name__ == "__main__":
